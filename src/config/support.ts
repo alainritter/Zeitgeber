@@ -9,6 +9,6 @@
 export const APP_VERSION = '1.0.0';
 
 export const support = {
-  repo: 'https://github.com/darkjive/zeitgeber',
+  repo: 'https://github.com/alainritter/Zeitgeber',
   paypal: 'https://paypal.me/AlainRitter',
 };

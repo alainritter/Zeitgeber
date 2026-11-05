@@ -7,7 +7,7 @@
 | **Status** | Referenz-Web-Client umgesetzt (Phase 1 vollständig, Phase 2/3 großteils); native App und Provider in Arbeit |
 | **Lizenz** | MIT, Open Source |
 | **Arbeitstitel** | Zeitgeber |
-| **Referenz-Implementierung** | https://github.com/darkjive/zeitgeber |
+| **Referenz-Implementierung** | https://github.com/alainritter/Zeitgeber |
 
 > Eigenständiger Neubau. Konzeptionell inspiriert von Gordon's Sun Clock (dynamisches Zifferblatt nach Sonnenstand) und Sky Tonight (AR-Kamera-Liveview). Kein Code-Reuse, eigene Architektur, eigener Funktionsumfang.
 
@@ -1101,7 +1101,7 @@ Diese Punkte waren bis v1.0 offen und sind entschieden. Sie binden die weitere U
 ## 40. Umsetzungsstand (Referenz-Web-Client)
 
 Stand Version 1.2. Die Referenz-Implementierung
-(https://github.com/darkjive/zeitgeber) ist ein eigenständiges Web-Target (kein
+(https://github.com/alainritter/Zeitgeber) ist ein eigenständiges Web-Target (kein
 `react-native-web`), das die **UI-freie Berechnungsebene** (Abschnitt 6.3)
 umsetzt; ein nativer Aufsatz (React Native + Expo) teilt sich diese Ebene.
 
