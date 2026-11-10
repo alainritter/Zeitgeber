@@ -217,4 +217,4 @@ brauchen einen Test gegen einen Referenzwert.
 
 ## Lizenz
 
-[AGPL-3.0](./LICENSE).
+[AGPL-3.0](./LICENSE.md).
