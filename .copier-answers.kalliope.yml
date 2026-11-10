@@ -1,0 +1,10 @@
+# Changes here will be overwritten by Copier; do not edit manually
+_commit: v1.1.1
+_src_path: /home/a/Dev/Kalliope
+has_architecture: false
+has_screenshot: false
+lang: de
+license: custom
+project_name: Zeitgeber
+status: active
+summary: Astronomisch korrekte Sonnenuhr.
