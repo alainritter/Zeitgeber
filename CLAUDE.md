@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+Prüfen: `npm run typecheck && npm test` (Runner und Abnahme nutzen diesen Befehl)
+
 Zeitgeber ist eine astronomisch korrekte Sonnenuhr (TypeScript strict, Vite, PWA, offline, ohne Backend). Überblick: `README.md`, Spezifikation: `docs/SPEC.md`, Push-Einrichtung: `docs/PUSH_SETUP.md`, Mitarbeit: `CONTRIBUTING.md`.
 
 ## Befehle
