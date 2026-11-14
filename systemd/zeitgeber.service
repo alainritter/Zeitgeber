@@ -1,0 +1,14 @@
+[Unit]
+Description=Zeitgeber (Vite :5181)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/a/Dev/Zeitgeber
+Environment=PATH=/home/a/.local/share/pnpm:/home/a/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/npm run dev
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
