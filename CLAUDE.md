@@ -16,6 +16,6 @@ Zeitgeber ist eine astronomisch korrekte Sonnenuhr (TypeScript strict, Vite, PWA
 ## Regeln
 
 - Eigenes Design, nicht Harmonia (siehe `~/Dev/CLAUDE.md`).
-- Lizenz ist AGPL-3.0, nicht MIT; nie an Kalliope anbinden.
+- Lizenz ist AGPL-3.0, nicht MIT; an Kalliope nur mit `license: custom` angebunden (keine Lizenzdatei aus der Vorlage).
 - Die App muss offline funktionieren; keine Laufzeit-Abhängigkeit von externen Diensten ohne Fallback.
 - Vercel: Push auf `main` kann live gehen, Arbeit auf einem Branch lassen, bis sie geprüft ist.
