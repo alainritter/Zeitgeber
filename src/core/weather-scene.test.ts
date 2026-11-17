@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { phaseMix, sceneForCode, skyImage, WEATHER_SCENES } from './weather-scene';
+import { phaseMix, sceneForCode, scrimAlpha, skyImage, WEATHER_SCENES } from './weather-scene';
 
 describe('sceneForCode', () => {
   it.each([
@@ -43,6 +43,22 @@ describe('phaseMix', () => {
     expect(b.from).toBe('twilight');
     expect(b.t).toBeCloseTo(0, 1);
     expect(phaseMix(-11.99).t).toBeCloseTo(1, 1);
+  });
+});
+
+describe('scrimAlpha', () => {
+  it('ist am Tag schwach, in der Dämmerung stark und geht stetig dazwischen', () => {
+    expect(scrimAlpha(phaseMix(40), 'overcast')).toBeCloseTo(0.3);
+    expect(scrimAlpha(phaseMix(-4), 'overcast')).toBeCloseTo(0.72);
+    expect(scrimAlpha(phaseMix(-30), 'overcast')).toBeCloseTo(0.5);
+    const mid = scrimAlpha(phaseMix(1), 'overcast');
+    expect(mid).toBeGreaterThan(0.3);
+    expect(mid).toBeLessThan(0.72);
+  });
+
+  it('deckt dunkle Tageshimmel stärker ab als helle', () => {
+    expect(scrimAlpha(phaseMix(40), 'storm')).toBeGreaterThan(scrimAlpha(phaseMix(40), 'fog'));
+    expect(scrimAlpha(phaseMix(40), 'rain')).toBeGreaterThan(scrimAlpha(phaseMix(40), 'snow'));
   });
 });
 

@@ -45,4 +45,24 @@ export function phaseMix(elevationDeg: number): PhaseMix {
   return { from: 'twilight', to: 'night', t: (TWILIGHT_MID - elevationDeg) / (TWILIGHT_MID - NIGHT_FROM) };
 }
 
+// Deckkraft des Scrims über dem Bild je Lichtphase: in der Dämmerung stark (der Himmel ist dort
+// heller als die Dämmerungs-Palette, die Schrift verliert sonst Kontrast), nachts mittel.
+// Am Tag hängt sie vom Himmel ab: helle Szenen schwach (sonst wirken sie weiß und
+// ausgebleicht), dunkle (Regen, Sturm, tiefes Blau) stärker, weil die Tagschrift dunkel ist.
+const SCRIM_OTHER = { twilight: 0.72, night: 0.5 };
+const SCRIM_DAY: Record<WeatherScene, number> = {
+  clear: 0.4,
+  partly: 0.3,
+  overcast: 0.3,
+  fog: 0.3,
+  rain: 0.55,
+  snow: 0.3,
+  storm: 0.55,
+};
+
+export function scrimAlpha(mix: PhaseMix, scene: WeatherScene): number {
+  const of = (p: LightPhase): number => (p === 'day' ? SCRIM_DAY[scene] : SCRIM_OTHER[p]);
+  return of(mix.from) + (of(mix.to) - of(mix.from)) * mix.t;
+}
+
 export const skyImage = (scene: WeatherScene, phase: LightPhase): string => `weather/${scene}-${phase}.webp`;

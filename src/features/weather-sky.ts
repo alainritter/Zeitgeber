@@ -11,7 +11,7 @@
  * im Cache), bleibt die normale Theme-Fläche stehen — nie eine leere Ansicht (§10).
  */
 
-import { phaseMix, skyImage, type LightPhase, type WeatherScene } from '../core/weather-scene';
+import { phaseMix, scrimAlpha, skyImage, type LightPhase, type WeatherScene } from '../core/weather-scene';
 
 export interface SkyState {
   scene: WeatherScene;
@@ -135,7 +135,9 @@ export class WeatherSky {
 
   private applyMix(elevation: number): void {
     if (!this.stage) return;
-    const { from, to, t } = phaseMix(elevation);
+    const mix = phaseMix(elevation);
+    const { from, to, t } = mix;
+    this.root.style.setProperty('--wsky-scrim', scrimAlpha(mix, this.stage.scene).toFixed(3));
     for (const [phase, img] of Object.entries(this.stage.imgs) as [LightPhase, HTMLImageElement][]) {
       let o = 0;
       if (from === to) o = phase === from ? 1 : 0;

@@ -130,6 +130,21 @@ NIGHT_PEAK = 140  # hellste 5 % der Pixel: strahlend weiße Wolken passen nicht 
 NIGHT_TINT = (14, 22, 48)
 
 
+# Helle Szenen wären am Tag fast weiß (und das Scrim der App hellt zusätzlich auf):
+# auf einen grauen Zielwert abdunkeln, leicht kühl getönt. Idempotent wie grade_night.
+DAY_LUMA = {"overcast": 135, "fog": 160, "snow": 165}
+DAY_TINT = (110, 130, 160)
+
+
+def grade_day(scene, im):
+    target = DAY_LUMA.get(scene)
+    luma = ImageStat.Stat(im.convert("L")).mean[0]
+    if target is None or luma <= target:
+        return im
+    im = ImageEnhance.Brightness(im).enhance(target / luma)
+    return Image.blend(im, Image.new("RGB", im.size, DAY_TINT), 0.12)
+
+
 def grade_night(im):
     """Zu helle Nachtbilder (bedeckt, Nebel, Schnee: img2img behält den hellen Tag; auch helle
     Wolken vor dunklem Himmel) abdunkeln und kühl einfärben. Bilder unter den Zielwerten
@@ -161,15 +176,19 @@ def main():
     ap.add_argument("--seed", type=int, default=7, help="Basis-Seed; die Szene i bekommt seed+i")
     ap.add_argument("--only", help="nur diese Szenen, kommagetrennt (zum Nachwürfeln)")
     ap.add_argument("--phases", default="day,twilight,night", help="nur diese Lichtphasen neu erzeugen")
-    ap.add_argument("--grade-only", action="store_true", help="nur die vorhandenen Nachtbilder abdunkeln (ohne InvokeAI)")
+    ap.add_argument("--grade-only", action="store_true", help="nur die vorhandenen Tag- und Nachtbilder nachbearbeiten (ohne InvokeAI)")
     ap.add_argument("--contact", help="Pfad für den Kontaktbogen (JPEG), 3 Spalten je Szene")
     a = ap.parse_args()
 
     if a.grade_only:
         for scene in SCENES:
-            path = os.path.join(a.out, f"{scene}-night.webp")
-            if os.path.exists(path):
-                save(grade_night(Image.open(path).convert("RGB")), path)
+            for phase, grade in (("day", lambda im, sc=None: grade_day(sc, im)), ("night", lambda im, sc=None: grade_night(im))):
+                path = os.path.join(a.out, f"{scene}-{phase}.webp")
+                if os.path.exists(path):
+                    im = Image.open(path).convert("RGB")
+                    graded = grade(im, scene)
+                    if graded is not im:  # unveränderte Bilder nicht erneut verlustbehaftet speichern
+                        save(graded, path)
         return
 
     try:
@@ -202,6 +221,8 @@ def main():
                 im = run(img2img(g, upload(row["day"]), strength), prompt, seed)
             if phase == "night":
                 im = grade_night(im)
+            elif phase == "day":
+                im = grade_day(scene, im)
             row[phase] = im
             save(im, path)
         for phase in ("day", "twilight", "night"):

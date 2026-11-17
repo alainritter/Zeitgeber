@@ -2531,7 +2531,7 @@ body {
 }
 
 .wsky__scrim {
-  background: color-mix(in srgb, var(--bg) 58%, transparent);
+  background: color-mix(in srgb, var(--bg) calc(var(--wsky-scrim, 0.5) * 100%), transparent);
 }
 
 .wsky__fog {
