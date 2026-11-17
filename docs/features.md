@@ -40,7 +40,7 @@ Gerät.
 | Zivilschutz-Warnungen | amtliche Warnungen des Bundes für den eigenen Landkreis (nur Deutschland) |
 | Erinnerungen | dynamischer Wecker für fällige Hinweise, im Vordergrund/Wandmodus lokal, optional per Hintergrund-Push |
 | Wetter | Beobachtungseignung über Open-Meteo, mit Offline-Rückfall; zeigt in der Wetterzeile, wenn in den nächsten zwei Stunden Regen, Wind, Sturm oder Sonne bevorsteht |
-| Wetterhimmel | abschaltbare Hintergrundebene: Landschaftsbild passend zu Wetter und Sonnenstand, sanft verschoben, mit Regen, Schnee, Nebel und Blitz; Standard aus, bei „Bewegung reduzieren“ statisch |
+| Wetterhimmel | abschaltbare Hintergrundebene: Himmelsbild passend zu Wetter und Sonnenstand (nachts mit Sternen), sanft verschoben, mit Regen, Schnee, Nebel und Blitz; Standard aus, bei „Bewegung reduzieren“ statisch |
 | Wetter-Hinweise | optionale Push-Kategorie (Erinnerungen): „Die Sonne kommt raus“, „Es wird windig“, „Ein Sturm zieht auf“, „Gleich fängt es an zu regnen“; nachts nur Stürme |
 | Teilen & Export | aktuelle Ansicht als hochauflösendes PNG mit Fußzeile |
 | Wandmodus | lebende Wanduhr mit Abdunklung und Einbrennschutz |
@@ -60,6 +60,6 @@ jemand danach sucht.
 ## Quellen der Wetterdaten und -bilder
 
 Wetterdaten: [Open-Meteo.com](https://open-meteo.com/) (CC BY 4.0). Die Bilder des
-Wetterhimmels sind mit Krea 2 Turbo (Krea 2 Community License; Krea beansprucht
+Wetterhimmels (reiner Himmel, ohne Ort) sind mit Krea 2 Turbo (Krea 2 Community License; Krea beansprucht
 keine Rechte an den Ausgaben) erzeugt und liegen in `public/weather/`. Das Skript
 `scripts/weather-images.py` erzeugt sie neu und wird nur dafür gebraucht.

@@ -8,7 +8,7 @@ Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ### Hinzugefügt
 
-- Wetterhimmel: abschaltbare Hintergrundebene mit Landschaftsbild je Wetter und
+- Wetterhimmel: abschaltbare Hintergrundebene mit Himmelsbild je Wetter und
   Sonnenstand, Regen-, Schnee-, Nebel- und Blitzeffekt (Spec §28)
 - Wetter-Hinweise als Push-Kategorie (Sonne, Wind, Sturm, Regen) und Hinweis in
   der Wetterzeile, aus der Open-Meteo-Kurzfrist-Vorhersage
