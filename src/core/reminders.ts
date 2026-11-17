@@ -24,7 +24,7 @@ export interface ReminderEvent {
   msgKey: string;
 }
 
-export type ReminderCategory = 'comfort' | 'outdoor' | 'civil-warning';
+export type ReminderCategory = 'comfort' | 'outdoor' | 'civil-warning' | 'weather';
 
 export function dayKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -67,6 +67,8 @@ const SOURCES: Record<ReminderCategory, (now: Date, loc: GeoLocation) => Reminde
   // Braucht echtes Netzwerk (BBK-API) — läuft nicht über diese rein lokale
   // Pipeline, sondern über einen eigenen Zweig in api/cron.ts.
   'civil-warning': () => [],
+  // Ebenfalls netzabhängig (Open-Meteo-Nowcast) — eigener Zweig in api/cron.ts.
+  weather: () => [],
 };
 
 /** Alle anstehenden Ereignisse der aktiven Kategorien für den Tag von `now`. */

@@ -10,6 +10,7 @@
 import type { GeoLocation } from '../core/astro-engine';
 import type { HourTemp } from '../core/comfort';
 import { pressureTrend, type PressureChange, type PressurePoint } from '../core/pressure';
+import { nowcastUrl, parseNowcast, type Nowcast } from '../core/weather-alerts';
 import type { IconName } from '../icons';
 
 export interface WeatherNow {
@@ -78,6 +79,24 @@ export async function fetchWeather(loc: GeoLocation): Promise<WeatherNow | null>
     return w;
   } catch {
     return readCache(loc); // letzter Stand, evtl. null
+  }
+}
+
+/**
+ * Kurzfrist-Vorhersage der nächsten 2 Stunden (15-Minuten-Schritte) für den
+ * Wetterhimmel und die Hinweiszeile. Wie die übrigen Abrufe ohne Schlüssel;
+ * ohne Netz null — die Anzeige lässt den Hinweis dann weg (§10).
+ */
+export async function fetchNowcast(loc: GeoLocation): Promise<Nowcast | null> {
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    const res = await fetch(nowcastUrl(loc.latitude, loc.longitude), { signal: ctrl.signal });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error(`http ${res.status}`);
+    return parseNowcast(await res.json());
+  } catch {
+    return null;
   }
 }
 

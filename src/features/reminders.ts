@@ -20,6 +20,7 @@ import { hasPushSubscription, pushSupported, subscribeToPush, unsubscribeFromPus
 
 const ENABLED_KEY = 'zeitgeber.reminders';
 const FIRED_KEY = 'zeitgeber.remindersFired';
+const WEATHER_KEY = 'zeitgeber.weatherAlerts';
 
 // v1: kuratiert auf die Hitzeschutz-Hinweise (Fassade, Lüften). Erweiterbar.
 const ACTIVE: ReminderCategory[] = ['comfort', 'civil-warning'];
@@ -43,6 +44,24 @@ export function remindersEnabled(): boolean {
     return localStorage.getItem(ENABLED_KEY) === '1';
   } catch {
     return false;
+  }
+}
+
+/** Wetter-Hinweise sind eine eigene Einwilligung und laufen nur über Hintergrund-Push. */
+export function weatherAlertsEnabled(): boolean {
+  try {
+    return localStorage.getItem(WEATHER_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function setWeatherAlertsFlag(on: boolean): void {
+  try {
+    if (on) localStorage.setItem(WEATHER_KEY, '1');
+    else localStorage.removeItem(WEATHER_KEY);
+  } catch {
+    /* ignore */
   }
 }
 
@@ -100,7 +119,7 @@ function currentMeta(): PushMeta {
     lon: loc.longitude,
     tz,
     lang: deps!.getLang(),
-    categories: ACTIVE,
+    categories: weatherAlertsEnabled() ? [...ACTIVE, 'weather'] : ACTIVE,
     ars: kreis ? arsFromAgs(kreis.ags) : undefined,
   };
 }
@@ -253,6 +272,12 @@ export function openReminders(t: Translator, onChange?: () => void): void {
 
     <p class="remind__status" id="rm-status"></p>
 
+    <label class="pin-toggle">
+      <input type="checkbox" id="rm-weather" ${weatherAlertsEnabled() ? 'checked' : ''} ${remindersEnabled() ? '' : 'disabled'} />
+      <span>${t('remind.weather')}</span>
+    </label>
+    <p class="solar__note">${t('remind.weather.note')}</p>
+
     <p class="solar__note">${t('remind.note')}</p>
 
     <div class="onboard__actions">
@@ -273,11 +298,17 @@ export function openReminders(t: Translator, onChange?: () => void): void {
   void paintStatus();
 
   const cb = card.querySelector('#rm-on') as HTMLInputElement;
+  const wcb = card.querySelector('#rm-weather') as HTMLInputElement;
   cb.addEventListener('change', async () => {
     if (cb.checked) await enableReminders();
     else disableReminders();
+    wcb.disabled = !cb.checked;
     await paintStatus();
     onChange?.();
+  });
+  wcb.addEventListener('change', async () => {
+    setWeatherAlertsFlag(wcb.checked);
+    await refreshReminderMeta(); // Kategorien im Server-Abo nachziehen
   });
 
   (card.querySelector('#rm-test') as HTMLElement).addEventListener('click', () => previewReminder(t));

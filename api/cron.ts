@@ -14,6 +14,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { ensureVapid, hashEndpoint, redis, sentKey, subKey, SUBS_SET, webpush, type StoredSubscription } from './_shared.js';
 import { collectReminders } from '../src/core/reminders.js';
 import { normalizeWarnings, type CivilWarning } from '../src/core/civil-warnings.js';
+import { applyQuietPolicy, detectWeatherAlerts, localHour, nowcastUrl, parseNowcast, type Nowcast } from '../src/core/weather-alerts.js';
 import { createTranslator } from '../src/i18n/index.js';
 
 // Fällig, wenn die Benachrichtigungszeit in den letzten 20 Minuten liegt —
@@ -61,6 +62,50 @@ function warningsForArs(ars: string, cache: Map<string, Promise<CivilWarning[]>>
   return p;
 }
 
+// Wetter-Hinweise: derselbe Typ kommt höchstens alle 3 Stunden.
+const WEATHER_COOLDOWN_S = 3 * 3600;
+
+async function fetchNowcastFor(key: string): Promise<Nowcast | null> {
+  const [lat, lon] = key.split(',').map(Number);
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    const res = await fetch(nowcastUrl(lat, lon), { signal: ctrl.signal });
+    return res.ok ? parseNowcast(await res.json()) : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Orte auf 2 Nachkommastellen (~1 km) runden: Abos in derselben Gegend teilen sich einen Abruf. */
+const nowcastKey = (sub: StoredSubscription): string => `${sub.lat.toFixed(2)},${sub.lon.toFixed(2)}`;
+
+function fmtLocalTime(at: Date, sub: StoredSubscription, offsetSeconds: number): string {
+  try {
+    return new Intl.DateTimeFormat(sub.lang, { hour: '2-digit', minute: '2-digit', timeZone: sub.tz }).format(at);
+  } catch {
+    return new Date(at.getTime() + offsetSeconds * 1000).toISOString().slice(11, 16);
+  }
+}
+
+/** Zustellen; ein totes Abo (404/410) wird aufgeräumt. */
+async function deliver(sub: StoredSubscription, hash: string, payload: string): Promise<'sent' | 'pruned' | 'failed'> {
+  try {
+    await webpush.sendNotification({ endpoint: sub.endpoint, keys: sub.keys }, payload);
+    return 'sent';
+  } catch (err) {
+    const code = (err as { statusCode?: number }).statusCode;
+    if (code === 404 || code === 410) {
+      await redis.del(subKey(hash));
+      await redis.srem(SUBS_SET, hash);
+      return 'pruned';
+    }
+    return 'failed';
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (!authorized(req)) {
     res.status(401).json({ error: 'unauthorized' });
@@ -100,6 +145,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   // auf ein bereits erfülltes (oder unterwegs erfülltes) Promise im Cache.
   await Promise.all([...uniqueArs].map((ars) => warningsForArs(ars, warningsCache)));
 
+  // Wetter: je gerundetem Ort genau ein Abruf, ebenfalls parallel vorab.
+  const nowcastCache = new Map<string, Promise<Nowcast | null>>();
+  const nowcastFor = (key: string): Promise<Nowcast | null> => {
+    let p = nowcastCache.get(key);
+    if (!p) {
+      p = fetchNowcastFor(key);
+      nowcastCache.set(key, p);
+    }
+    return p;
+  };
+  const weatherKeys = new Set<string>();
+  for (const { sub } of loaded) if (sub?.categories.includes('weather')) weatherKeys.add(nowcastKey(sub));
+  await Promise.all([...weatherKeys].map(nowcastFor));
+
   for (const { hash, sub } of loaded) {
     if (!sub) {
       await redis.srem(SUBS_SET, hash);
@@ -122,18 +181,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         if (!first) continue;
 
         const payload = JSON.stringify({ title: t('remind.appTitle'), body: t(e.msgKey), tag: e.id, url: '/' });
-        try {
-          await webpush.sendNotification({ endpoint: sub.endpoint, keys: sub.keys }, payload);
-          sent++;
-        } catch (err) {
-          const code = (err as { statusCode?: number }).statusCode;
-          if (code === 404 || code === 410) {
-            // Abo ist tot (abbestellt/abgelaufen) → aufräumen.
-            await redis.del(subKey(hash));
-            await redis.srem(SUBS_SET, hash);
-            pruned++;
-          }
-        }
+        const r = await deliver(sub, hash, payload);
+        if (r === 'sent') sent++;
+        if (r === 'pruned') pruned++;
       }
 
       if (sub.categories.includes('civil-warning') && sub.ars) {
@@ -144,15 +194,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           if (!first) continue;
           const title = w.i18nTitle[sub.lang] ?? w.i18nTitle.de ?? w.id;
           const payload = JSON.stringify({ title: t('remind.appTitle'), body: title, tag: eventId, url: '/' });
-          try {
-            await webpush.sendNotification({ endpoint: sub.endpoint, keys: sub.keys }, payload);
-            sent++;
-          } catch (err) {
-            const code = (err as { statusCode?: number }).statusCode;
-            if (code === 404 || code === 410) {
-              await redis.del(subKey(hash));
-              await redis.srem(SUBS_SET, hash);
+          const r = await deliver(sub, hash, payload);
+          if (r === 'sent') sent++;
+          if (r === 'pruned') pruned++;
+        }
+      }
+
+      if (sub.categories.includes('weather')) {
+        const nc = await nowcastFor(nowcastKey(sub));
+        if (nc) {
+          const hour = localHour(now, sub.tz, nc.utcOffsetSeconds);
+          for (const a of applyQuietPolicy(detectWeatherAlerts(nc.now, nc.steps, now), hour)) {
+            const first = await redis.set(sentKey(hash, `weather:${a.type}`), 1, { nx: true, ex: WEATHER_COOLDOWN_S });
+            if (!first) continue;
+            const body = t(a.msgKey, { n: Math.round(a.gustKmh ?? 0), time: fmtLocalTime(a.at, sub, nc.utcOffsetSeconds) });
+            const payload = JSON.stringify({ title: t('remind.appTitle'), body, tag: `weather:${a.type}`, url: '/' });
+            const r = await deliver(sub, hash, payload);
+            if (r === 'sent') sent++;
+            if (r === 'pruned') {
               pruned++;
+              break; // Abo weg, weitere Hinweise wären zwecklos
             }
           }
         }
