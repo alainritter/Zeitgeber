@@ -13,7 +13,8 @@ zurück.
 ## Was gespeichert wird
 
 Nur das Nötigste zum Zustellen: der Push-Endpunkt des Browsers samt Schlüssel,
-grobe Koordinaten, Zeitzone, Sprache und die gewählten Kategorien. **Keine
+grobe Koordinaten, Zeitzone, Sprache und die gewählten Kategorien (Erinnerungen,
+Zivilschutz-Warnungen, Wetter-Hinweise). **Keine
 Konten, keine Namen, kein Verlauf.** Ein Abo wird gelöscht, sobald du die
 Erinnerungen ausschaltest (oder das Abo abläuft).
 

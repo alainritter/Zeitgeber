@@ -39,7 +39,10 @@ import { renderSkyMap } from './views/sky-map';
 import { buildOverlay, type DialOverlay, type OverlayId } from './core/dial-overlay';
 import { showOnboarding, hasOnboarded, type OnboardProfile } from './features/onboarding';
 import { WallMode } from './features/wallmode';
-import { fetchWeather, observationRating, weatherCondition, type WeatherNow } from './features/weather';
+import { fetchNowcast, fetchWeather, observationRating, weatherCondition, type WeatherNow } from './features/weather';
+import { WeatherSky } from './features/weather-sky';
+import { applyQuietPolicy, detectWeatherAlerts, topAlert, type Nowcast, type WeatherAlert } from './core/weather-alerts';
+import { sceneForCode, WEATHER_SCENES, type WeatherScene } from './core/weather-scene';
 import { fetchCivilWarnings, renderWarnCard } from './features/civil-warnings';
 import { nearestKreis, type CivilWarning } from './core/civil-warnings';
 import { renderViewToBlob, shareOrDownload } from './features/share';
@@ -90,6 +93,27 @@ let weather: WeatherNow | null = null;
 // am Ort verfügbar" nicht zu unterscheiden — beides wäre sonst `weather === null`.
 let weatherLoading = true;
 let civilWarnings: CivilWarning[] = [];
+let nowcast: Nowcast | null = null;
+
+// Wetterhimmel (§28): abschaltbare Hintergrundebene, persistiert, Default aus.
+const SKY_KEY = 'zeitgeber.weatherSky';
+let skyOn = ((): boolean => {
+  try {
+    return localStorage.getItem(SKY_KEY) === '1';
+  } catch {
+    return false;
+  }
+})();
+let sky: WeatherSky;
+
+/** Nur im Dev-Server: `?sky=storm&skyElev=-8` erzwingt Szene und Sonnenhöhe zum Durchklicken. */
+function devSky(): { scene?: WeatherScene; elevation?: number } {
+  if (!import.meta.env.DEV) return {};
+  const q = new URLSearchParams(window.location.search);
+  const scene = WEATHER_SCENES.find((s) => s === q.get('sky'));
+  const elev = q.get('skyElev');
+  return { scene, elevation: elev === null ? undefined : Number(elev) };
+}
 
 // Zeitreise (§24): null = Live (jetzt), sonst eingefrorener Zeitpunkt.
 let frozenTime: Date | null = null;
@@ -520,7 +544,12 @@ function buildDrawer(): void {
       <span class="mrow__label">${t(l.labelKey)}</span>
       <span class="mrow__switch" aria-hidden="true"></span>
     </button>`,
-  ).join('');
+  ).join('') + `
+    <button class="mrow" data-set="sky" role="switch" aria-checked="${skyOn}">
+      ${iconSpan('cloud-sun', '#6FA3C7')}
+      <span class="mrow__label">${t('weather.sky')}</span>
+      <span class="mrow__switch" aria-hidden="true"></span>
+    </button>`;
 
   // Info-Module — Kippschalter, Karte erscheint/verschwindet im Content-Bereich.
   $('#drawer-modules').innerHTML = INFO_MODULES.map(
@@ -606,6 +635,7 @@ function render(now: Date): void {
   const { palette, nightness, sky } = paletteForElevation(sun?.horizontal.elevation ?? -90);
   applyPalette(palette, sky, nightness);
   wall?.setNightness(nightness);
+  updateSky(sun?.horizontal.elevation ?? -90);
 
   // Ansicht (Achse B): Zifferblatt, Himmelskarte oder Objektliste
   const wrap = $('#view-wrap');
@@ -734,7 +764,10 @@ function renderWeather(moon?: { horizontal: { elevation: number }; metadata?: Re
   badge.textContent = t(`weather.${rating}`);
   badge.dataset.rating = rating;
   const stamp = t('weather.stamp', { time: fmtTime(new Date(weather.fetchedAt)) });
-  $('#weather-sub').textContent = `${t('weather.clouds')} ${Math.round(weather.cloudCover)} % · ${stamp}`;
+  const alert = currentWeatherAlert();
+  $('#weather-sub').textContent = alert
+    ? t(alert.msgKey, { n: Math.round(alert.gustKmh ?? 0), time: fmtTime(alert.at, false, location.timeZone) })
+    : `${t('weather.clouds')} ${Math.round(weather.cloudCover)} % · ${stamp}`;
 }
 
 function renderOverlayKey(overlay: DialOverlay | null): void {
@@ -773,7 +806,7 @@ function renderOverlayKey(overlay: DialOverlay | null): void {
 async function refreshWeather(): Promise<void> {
   weatherLoading = true;
   renderWeather(bus.collect({ time: currentTime(), location }).find((o) => o.kind === 'moon'));
-  weather = await fetchWeather(location);
+  [weather, nowcast] = await Promise.all([fetchWeather(location), fetchNowcast(location)]);
   weatherLoading = false;
   renderWeather(bus.collect({ time: currentTime(), location }).find((o) => o.kind === 'moon'));
 }
@@ -896,6 +929,41 @@ function toggleLayer(id: LayerId, row: HTMLElement): void {
   rerender();
 }
 
+function toggleSky(row: HTMLElement): void {
+  skyOn = !skyOn;
+  try {
+    if (skyOn) localStorage.setItem(SKY_KEY, '1');
+    else localStorage.removeItem(SKY_KEY);
+  } catch {
+    /* Auswahl ist Komfort. */
+  }
+  sky.setEnabled(skyOn);
+  row.setAttribute('aria-checked', String(skyOn));
+  rerender();
+}
+
+/** Szene und Lichtphase aus aktuellem Wetter und Sonnenhöhe an die Ebene geben. */
+function updateSky(elevation: number): void {
+  if (!sky?.enabled) return;
+  const dev = devSky();
+  const code = nowcast?.now.code ?? weather?.weatherCode;
+  const scene = dev.scene ?? (code === undefined ? null : sceneForCode(code));
+  if (!scene) return; // ohne Wetterdaten bleibt die Theme-Fläche (§10)
+  const wet = scene === 'rain' || scene === 'storm' || scene === 'snow';
+  sky.update({
+    scene,
+    elevation: dev.elevation ?? elevation,
+    gustKmh: nowcast?.now.gustKmh ?? (dev.scene === 'storm' ? 60 : 0),
+    precipMm: nowcast?.now.precipMm ?? (dev.scene && wet ? 1.5 : 0),
+  });
+}
+
+/** Wichtigster Hinweis der nächsten 2 Stunden für die Wetterzeile; ohne Ruhezeit, es ist ja Anzeige. */
+function currentWeatherAlert(): WeatherAlert | null {
+  if (!nowcast) return null;
+  return topAlert(applyQuietPolicy(detectWeatherAlerts(nowcast.now, nowcast.steps, new Date()), 12));
+}
+
 async function toggleWall(): Promise<void> {
   if (wall.isActive) wall.exit();
   else await wall.enter();
@@ -972,6 +1040,8 @@ function wireEvents(): void {
       const mod = TOOL_MODULES.find((m) => m.key === row.dataset.mod);
       closeDrawer();
       mod?.open(currentTime());
+    } else if (row.dataset.set === 'sky') {
+      toggleSky(row);
     } else if (row.dataset.set === 'lang') {
       setLang(lang === 'de' ? 'en' : 'de'); // baut den Drawer neu auf
     } else if (row.dataset.set === 'reminders') {
@@ -1071,6 +1141,8 @@ async function boot(): Promise<void> {
   applyDesktopLayout();
   wall = new WallMode(app, () => applyStaticI18n());
   wireEvents();
+  sky = new WeatherSky(app);
+  sky.setEnabled(skyOn || devSky().scene !== undefined);
   applyStaticI18n();
   rerender();
   await adoptGpsIfAllowed();

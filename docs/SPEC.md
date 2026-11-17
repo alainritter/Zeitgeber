@@ -29,7 +29,8 @@
 | 1.0 | Vollständige Neustrukturierung in sieben Teile, durchlaufende Nummerierung, regulatorische Leitplanken konsolidiert, Meta-Kopf und Inhaltsverzeichnis ergänzt |
 | 1.1 | Sechs Grundsatzentscheidungen getroffen (Abschnitt 38): rein lokale Datenhaltung ohne Backend, keine Kamera-Ansicht auf Web, Spenden über GitHub Sponsors und PayPal, rechtliche Prüfung vor Phase 2, etablierte Konventionen für Gebetszeiten, `uv-window` gestrichen |
 | 1.2 | Referenz-Web-Client umgesetzt und veröffentlicht. Neues Modul `comfort` (Hitzeschutz: Lüften & Verschattung, Abschnitt 31.8). Modul-Menü als Sammelstelle der optionalen Panels (Abschnitt 11.5). Monetarisierungsmodell bestätigt (Open Source + Spenden, kein In-App-Kauf). Umsetzungsstand dokumentiert (Abschnitt 40). |
-| **1.3** | **Spenden ausschließlich über PayPal (Abschnitt 38.3); GitHub Sponsors gestrichen.** |
+| 1.3 | Spenden ausschließlich über PayPal (Abschnitt 38.3); GitHub Sponsors gestrichen. |
+| **1.4** | **Wetterhimmel als abschaltbare Hintergrundebene und Wetter-Hinweise als Push-Kategorie (Abschnitt 28).** |
 
 ---
 
@@ -750,6 +751,8 @@ Ohne Wetterinformation ist die Beobachtungsebene praktisch nutzlos — Nutzer m�
 - Darstellung icon-basiert und ruhig, bewusst ohne Unwetter-Dramatik
 - **Beobachtungseignung** als abgeleiteter Indikator aus Bewölkung, Mondphase und Dämmerungsende
 - Offline: letzter bekannter Stand mit Zeitstempel, keine leere Ansicht
+- **Wetterhimmel** (optional, Standard aus): Hintergrundebene mit Landschaftsbild je Wetterszene (klar, wolkig, bedeckt, Nebel, Regen, Schnee, Sturm) und Lichtphase (Tag, Dämmerung, Nacht), die Phase folgt stetig der Sonnenhöhe (Abschnitt 12). Leichte Live-Effekte (Regen, Schnee, Nebel, Blitz) laufen nur bei passendem Wetter, mit 30 fps und pausiert bei verstecktem Tab. Bei „Bewegung reduzieren“ (Abschnitt 13) bleibt alles statisch; fehlt ein Bild offline, bleibt die Theme-Fläche. Dies ist die ausdrückliche, abschaltbare Ausnahme zur „Ohne Unwetter-Dramatik“-Regel oben, die für die Icon-Karte weiter gilt.
+- **Wetter-Hinweise** als Push-Kategorie `weather` des Erinnerungs-Moduls: Kurzfrist-Vorhersage (15-Minuten-Schritte, 2 Stunden) → „Sonne kommt raus“, „Wind“ (Böen ab 50 km/h), „Sturm“ (Gewitter oder Böen ab 75 km/h), „Regen beginnt“. Höchstens alle 3 Stunden je Typ, zwischen 23 und 6 Uhr Ortszeit nur Sturm. Rein beschreibend, keine amtliche Warnung.
 
 ---
 
