@@ -15,7 +15,7 @@
   },
   "devDependencies": {
     "@types/web-push": "^3.6.4",
-    "@vercel/node": "^5.9.9",
+    "@vercel/node": "^5.10.2",
     "geo-tz": "^8.1.9",
     "typescript": "^5.6.3",
     "vite": "^8.3.7",
