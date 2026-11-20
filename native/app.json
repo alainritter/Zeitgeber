@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Zeitgeber",
+    "slug": "zeitgeber",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "zeitgeber",
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Dein Standort bestimmt den Sonnenstand und den Sonnenzeit-Versatz. Er wird nur lokal auf dem Gerät verarbeitet."
+      }
+    },
+    "android": {
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0B0D12"
+      }
+    },
+    "plugins": [
+      "expo-location"
+    ],
+    "icon": "./assets/icon.png"
+  }
+}

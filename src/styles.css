@@ -1,0 +1,2491 @@
+/* Zeitgeber — Wabi-Tech (Spec §11): Reduktion, viel Leerraum, feine Linien,
+   Kreisformen dominant. Farben kommen als CSS-Variablen aus der Theme-Engine. */
+
+:root {
+  --bg: #f7f5f0;
+  --surface: #ffffff;
+  --accent: #c94f3d;
+  --secondary: #2b3a42;
+  --text: #1a1a1a;
+  --text-dim: #5e5e5e;
+  --on-accent: #ffffff;
+  --bg-top: var(--bg);
+  --bg-bottom: var(--bg);
+  --wall-brightness: 1;
+  --wall-drift-x: 0px;
+  --wall-drift-y: 0px;
+
+  /* Eine ruhige Schriftfamilie, leichte Schnitte. Zahlen laufen tabellarisch
+     (tnum), damit sie ohne klobige Monospace ausgerichtet bleiben. */
+  --font-head: 'Inter', system-ui, sans-serif;
+  --font-ui: 'Inter', system-ui, sans-serif;
+
+  /* Dezente Scrollbar statt OS-Standard (Chrome zeigt sonst einen klobigen
+     grauen Balken; Firefox blendet ihn schon von sich aus dezent ein/aus).
+     Standard-Property, wird vererbt — gilt für alle scrollbaren Container. */
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text-dim) 45%, transparent) transparent;
+}
+
+/* Chrome/WebKit ignoriert `scrollbar-width: thin` nur teilweise — eigene
+   Balkenbreite plus transparenter Rahmen um den Thumb schafft den Abstand
+   zum Content, den Firefox über `thin` schon automatisch bekommt. */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--text-dim) 45%, transparent);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--text-dim) 65%, transparent);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Weicher Farbwechsel bei jeder Themenänderung (Dimmen entlang der
+   Sonnenhöhe, §11.4/§12): verhindert, dass Text/Grund am Tag-Nacht-Kipppunkt
+   hart von Schwarz auf Weiß springen — der Sprung selbst ist unvermeidbar
+   (siehe theme-engine.ts), wird hier aber weich überblendet. Niedrige
+   Spezifität (Tag- + Universalselektor), damit spezifischere Regeln mit
+   eigener `transition` (Hover-States etc.) Vorrang behalten.
+*/
+body,
+body * {
+  transition: color 0.8s ease, background-color 0.8s ease;
+}
+
+/* Für Screenreader: Text neben Icon-only-Labels erhalten, visuell aber weg. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.005em;
+  transition:
+    background 1.2s ease,
+    color 1.2s ease;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#app {
+  min-height: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.frame {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  padding: 20px 20px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Automatische Abdunklung NUR im Wandmodus (§25) — im normalen Betrieb bleibt
+   die Oberfläche voll hell. */
+#app.is-wall .frame {
+  filter: brightness(var(--wall-brightness));
+  transition: filter 2s ease;
+}
+
+/* Topbar */
+.topbar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.topbar__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand__mark {
+  width: 1.6em;
+  height: 1.6em;
+  font-size: var(--fs-lg);
+}
+
+.brand__name {
+  font-family: var(--font-head);
+  font-size: var(--fs-md);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.brand__tag {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+
+.topbar__actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--ctrl-h);
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding: 0 14px;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.btn--ghost {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--text-dim) 45%, transparent);
+  color: var(--text);
+}
+
+.btn--ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn--primary {
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Icon-Button (Burger, Schließen) — quadratisch, dezent, Lucide-Icon 1em */
+.iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ctrl-h);
+  height: var(--ctrl-h);
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-lg);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.iconbtn svg {
+  display: block;
+  stroke-width: 1.75;
+}
+
+/* Badge für aktive Zivilschutz-Warnungen — sticht bewusst farblich hervor. */
+.iconbtn--warn {
+  color: var(--accent);
+}
+
+/* display:inline-flex (von .iconbtn) würde [hidden] sonst aushebeln. */
+.iconbtn--warn[hidden] {
+  display: none;
+}
+
+.iconbtn:hover {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+
+.iconbtn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Stage */
+.stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Direkte Kinder dürfen nie schrumpfen: reicht die Höhe nicht (Breitbild,
+   .stage bekommt dort max-height+overflow-y), soll die Stage-Spalte intern
+   scrollen statt das Zifferblatt-SVG in die Ablesung hinein zu quetschen. */
+.stage > * {
+  flex-shrink: 0;
+}
+
+/* Sky-Zusammenfassung sitzt fest unter der Uhrzeit und soll die volle
+   Stage-Breite nutzen statt (wie Zifferblatt/Ablesung) auf Content-Breite
+   zu schrumpfen. */
+.stage .sky {
+  align-self: stretch;
+}
+
+.stage .locbar {
+  align-self: stretch;
+  margin-top: -14px;
+}
+
+.view-wrap {
+  width: min(78vw, 340px);
+  min-height: 200px;
+  transform: translate(var(--wall-drift-x), var(--wall-drift-y));
+  transition: transform 4s ease;
+}
+
+/* Zifferblatt-Tooltip (Hover/Touch statt dauerhafter Beschriftung am Ring) */
+.dial__hint {
+  cursor: pointer;
+}
+
+.dial-tip {
+  position: fixed;
+  transform: translate(-50%, calc(-100% - 10px));
+  z-index: 55;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--text);
+  color: var(--bg);
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.dial-tip[hidden] {
+  display: none;
+}
+
+.dial {
+  overflow: visible;
+}
+
+/* Legende für ein angeheftetes Modul-Overlay (§22) */
+.overlay-key {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 16px;
+}
+
+.overlay-key[hidden] {
+  display: none;
+}
+
+.overlay-key__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+
+.overlay-key__dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--k);
+  flex: none;
+}
+
+.overlay-key__dot--hollow {
+  background: transparent;
+  border: 2px solid var(--k);
+}
+
+/* „Aufs Zifferblatt heften" — Umschalter in einem Modul-Panel */
+/* Erinnerungs-Status im Panel */
+.remind__status {
+  font-size: var(--fs-sm);
+  margin: 4px 0 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--secondary) 14%, transparent);
+}
+
+.remind__status[data-state='push'] {
+  background: color-mix(in srgb, #4caf7d 24%, transparent);
+}
+
+.remind__status[data-state='denied'] {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--text);
+}
+
+.remind__status[hidden] {
+  display: none;
+}
+
+/* In-App-Erinnerung (§reminders) — dezenter Hinweis unten */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  transform: translate(-50%, 12px);
+  z-index: 80;
+  max-width: min(92vw, 400px);
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.28);
+  font-size: var(--fs-base);
+  line-height: 1.45;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+}
+
+.toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    transition: opacity 0.3s ease;
+  }
+}
+
+/* Controls: Ansicht-Umschalter + Layer-Toggle (§7.4) */
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.layers {
+  display: flex;
+  gap: 6px;
+}
+
+.skymap {
+  overflow: visible;
+}
+
+.seg {
+  display: inline-flex;
+  border: 1px solid color-mix(in srgb, var(--text-dim) 40%, transparent);
+  border-radius: 999px;
+  padding: 2px;
+}
+
+.seg__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: calc(var(--ctrl-h) - 2px);
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  padding: 0 14px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.seg__btn.is-active {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.seg__btn:not(.is-active):hover {
+  color: var(--accent);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--ctrl-h);
+  border: 1px solid color-mix(in srgb, var(--text-dim) 40%, transparent);
+  background: transparent;
+  color: var(--text-dim);
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  padding: 0 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.chip.is-on {
+  border-color: var(--secondary);
+  color: var(--text);
+  background: color-mix(in srgb, var(--secondary) 18%, transparent);
+}
+
+.chip--sm {
+  padding: 0 9px;
+  font-size: var(--fs-xs);
+  font-family: var(--font-mono);
+}
+
+/* Nur ein Gruppierungs-Rahmen fürs Dreispalten-Layout — im gestapelten
+   Layout (Default + Mobile) unsichtbar, Kinder verhalten sich wie direkte
+   Kinder von .frame. */
+.side {
+  display: contents;
+}
+
+/* Zeitreise-Leiste (§24) + Teilen (§33) */
+.timebar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.stepper {
+  display: flex;
+  gap: 4px;
+}
+
+.t-input {
+  display: inline-flex;
+  align-items: center;
+  height: var(--ctrl-h);
+  border: 1px solid color-mix(in srgb, var(--text-dim) 45%, transparent);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0 12px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+
+/* Zeitreise-Hinweis: dezenter Rahmen am Datumsfeld statt Einfärbung der
+   (sonst schlecht lesbaren) großen Uhrzeit. */
+#app.is-travelling .t-input {
+  border-color: var(--accent);
+}
+
+/* Objektliste (§24) */
+.objlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.objlist__row {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 6px;
+  border-bottom: 1px solid color-mix(in srgb, var(--text-dim) 18%, transparent);
+}
+
+.objlist__glyph {
+  font-size: var(--fs-base);
+  text-align: center;
+}
+
+.objlist__name {
+  font-size: var(--fs-base);
+}
+
+.objlist__tag {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  margin-left: 8px;
+}
+
+.objlist__meta {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+
+.objlist__empty {
+  text-align: center;
+  color: var(--text-dim);
+  padding: 32px 0;
+  font-size: var(--fs-base);
+}
+
+/* Zivilschutz-Warnungen (§5, §10, §38.1) */
+.warn__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: var(--fs-base);
+  line-height: 1.4;
+  margin: 0 0 12px;
+  text-align: left;
+}
+
+.warn__ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  font-size: var(--fs-md);
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.warn__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.warn__sev {
+  align-self: flex-start;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: #fff;
+}
+
+.warn__title {
+  color: var(--text);
+}
+
+/* Readout */
+.readout {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.readout__label {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--fs-md);
+  color: var(--text-dim);
+  margin-right: 8px;
+}
+
+.readout__time {
+  font-family: var(--font-mono);
+  font-size: 44px;
+  font-weight: 300;
+  letter-spacing: 0.005em;
+  line-height: 1.1;
+}
+
+.readout__solar {
+  margin-top: 2px;
+}
+
+.readout__solar-time {
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  color: var(--accent);
+}
+
+.offset {
+  margin: 10px 0 0;
+  font-size: var(--fs-base);
+  font-weight: 400;
+  max-width: 34ch;
+  margin-inline: auto;
+}
+
+.offset__explain {
+  margin: 4px 0 0;
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  max-width: 40ch;
+  margin-inline: auto;
+}
+
+/* Sky strip */
+.sky {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1fr;
+  gap: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--text-dim) 30%, transparent);
+  padding-top: 16px;
+}
+
+.sky__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: center;
+}
+
+.sky__k {
+  display: inline-flex;
+  justify-content: center;
+  color: var(--text-dim);
+  font-size: var(--fs-md);
+}
+
+.sky__v {
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+}
+
+.sky__sub {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+
+/* Location bar — Standort/Sicht/Wetter als eine Zeile über dem Zifferblatt,
+   im selben Spalten-Muster wie die Kennwerte-Zeile (.sky) darunter. */
+.locbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.locbar__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr);
+}
+
+.locbar__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: var(--fs-base);
+  cursor: default;
+  position: relative;
+}
+
+/* Wetter/Sicht laden spürbar nach (Netz). Die Zelle behält währenddessen ihre
+   Größe (Inhalt bleibt reserviert, nur unsichtbar) und zeigt stattdessen
+   einen zentrierten Spinner — kein Ein-/Ausblenden, das die Zeile verschiebt. */
+.locbar__cell.is-loading > :not(.locbar__spinner) {
+  visibility: hidden;
+}
+
+.locbar__spinner {
+  display: none;
+}
+
+.locbar__cell.is-loading .locbar__spinner {
+  display: block;
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--hair);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: locbar-spin 0.8s linear infinite;
+}
+
+@keyframes locbar-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .locbar__cell.is-loading .locbar__spinner {
+    animation: none;
+  }
+}
+
+.loc.locbar__cell {
+  cursor: text;
+  align-items: center;
+  text-align: center;
+}
+
+.locbar__k {
+  display: inline-flex;
+  color: var(--text-dim);
+  font-size: var(--fs-md);
+}
+
+.locbar__v {
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  white-space: nowrap;
+}
+
+.locbar__sub {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+
+.locbar__v[data-rating='good'] {
+  color: #4caf7d;
+}
+
+.locbar__v[data-rating='fair'] {
+  color: #d8a24a;
+}
+
+.loc__pin {
+  filter: grayscale(0.2);
+}
+
+.locbar__cell[hidden] {
+  display: none;
+}
+
+/* Das Eingabefeld übernimmt die Optik von .locbar__v (Zelle §7) statt
+   nativer Input-Chrome — Standortanzeige und manuelle Suche sind dieselbe
+   Zeile, kein separates Formular mehr unterhalb der Datenzeile. */
+#loc-input {
+  appearance: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 0;
+  width: 100%;
+  color: inherit;
+  text-align: center;
+  font-size: var(--fs-md);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#loc-input::placeholder {
+  color: var(--text-dim);
+}
+
+#loc-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Sucht-Button bricht bewusst in die zweite Zeile der Zelle um (§loc__field
+   wäre hier fehl am Platz — die Spalte ist zu schmal für Eingabefeld und
+   Knopf nebeneinander), bleibt aber innerhalb der Box statt eines eigenen
+   Formulars unter der Datenzeile. */
+.loc__submit {
+  align-self: center;
+  margin-top: 2px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--radius);
+  border: none;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+#loc-msg {
+  color: var(--accent);
+}
+
+/* Angenommener/fehlender Ort: Feld und Icon heben sich als
+   Handlungsaufforderung ab, bleiben aber in der Zelle statt in einer
+   eigenständigen Pille auszubrechen. */
+.loc.is-guess .locbar__k,
+.loc.is-guess #loc-input,
+.loc.is-guess #loc-input::placeholder {
+  color: var(--accent);
+}
+
+/* Onboarding */
+.onboard {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--bg) 92%, #000);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 50;
+}
+
+.onboard__card {
+  background: var(--surface);
+  border-radius: 24px;
+  padding: 36px 28px 24px;
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+}
+
+.onboard__glyph {
+  font-size: 44px;
+  margin-bottom: 12px;
+}
+
+.onboard__title {
+  font-family: var(--font-head);
+  font-size: var(--fs-lg);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  margin: 0 0 10px;
+}
+
+.onboard__body {
+  color: var(--text-dim);
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  margin: 0 0 22px;
+}
+
+.onboard__profiles {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 22px;
+  text-align: left;
+}
+
+.onboard__profiles[hidden] {
+  display: none;
+}
+
+.onboard__profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--text-dim) 25%, transparent);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-base);
+  cursor: pointer;
+}
+
+.onboard__profile.is-selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.onboard__profile-glyph {
+  font-size: var(--fs-lg);
+}
+
+.onboard__locate {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.onboard__locate svg {
+  margin-right: 6px;
+  vertical-align: -0.15em;
+}
+
+.onboard__locate[hidden] {
+  display: none;
+}
+
+.onboard__locate:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.onboard__locate-msg {
+  font-size: var(--fs-xs);
+  color: var(--accent);
+  margin: -4px 0 14px;
+}
+
+.onboard__dots {
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+  margin-bottom: 20px;
+}
+
+.onboard__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text-dim) 40%, transparent);
+}
+
+.onboard__dot.is-active {
+  background: var(--accent);
+}
+
+.onboard__actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Bottom-Sheet-Variante für die Werkzeuge (§7.4): schiebt sich von unten hoch,
+   lässt den Hintergrund durchscheinen, statt ihn vollständig zu verdecken. */
+.onboard--sheet {
+  align-items: flex-end;
+  padding: 0;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+}
+
+.onboard--sheet .onboard__card {
+  max-width: 560px;
+  border-radius: 20px 20px 0 0;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 24px 24px calc(20px + env(safe-area-inset-bottom));
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.25);
+  animation: onboard-sheet-in 0.28s ease;
+}
+
+/* Der Griff sieht aus wie eine Wischgeste, tut aber nichts, wenn man ihn
+   antippt, statt zu wischen — deshalb ein echtes, klickbares Element statt
+   eines reinen ::before, mit grosszügigerem Treffbereich als der schmale
+   sichtbare Balken. */
+.onboard--sheet .onboard__handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 28px;
+  margin: -8px 0 4px;
+  cursor: pointer;
+}
+
+.onboard--sheet .onboard__handle::before {
+  content: '';
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--hair-strong, color-mix(in srgb, var(--text-dim) 40%, transparent));
+}
+
+@keyframes onboard-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboard--sheet .onboard__card {
+    animation: none;
+  }
+}
+
+/* Solar-Ertrag-Panel (§31.1) */
+.onboard__card.solar {
+  text-align: left;
+  max-width: 420px;
+}
+
+.solar__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 8px 0 16px;
+}
+
+.solar__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--fs-base);
+  color: var(--text-dim);
+}
+
+.solar__field b {
+  color: var(--text);
+  font-family: var(--font-mono);
+}
+
+.solar__field input[type='range'] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.solar__curve {
+  width: 100%;
+  height: auto;
+  border: 1px solid color-mix(in srgb, var(--text-dim) 25%, transparent);
+  border-radius: 12px;
+  background: var(--bg);
+}
+
+.solar__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 16px 0 12px;
+}
+
+.solar__stats div {
+  text-align: center;
+}
+
+.solar__stats dt {
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin: 0 0 4px;
+}
+
+.solar__stats dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-base);
+  color: var(--text);
+}
+
+.solar__note {
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  color: var(--text-dim);
+  margin: 0 0 16px;
+}
+
+.solar__note--warn svg {
+  vertical-align: -0.15em;
+  margin-right: 2px;
+}
+
+/* Gebetszeiten-Panel (§32.1) */
+.onboard__card.prayer {
+  text-align: left;
+  max-width: 420px;
+}
+
+.prayer__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 8px 0 16px;
+}
+
+.prayer__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+.prayer__field select {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--text-dim) 40%, transparent);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--fs-base);
+}
+
+.prayer__list {
+  list-style: none;
+  margin: 0 0 12px;
+  margin-inline: -4px;
+  padding: 0;
+}
+
+.prayer__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 9px 4px;
+  border-bottom: 1px solid color-mix(in srgb, var(--text-dim) 18%, transparent);
+  font-size: var(--fs-base);
+}
+
+.prayer__row b {
+  font-family: var(--font-mono);
+}
+
+.prayer__ramadan {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  margin: 0 0 10px;
+}
+
+/* Chronobiologie-Panel (§26) */
+.onboard__card.chrono {
+  text-align: left;
+  max-width: 420px;
+}
+
+.chrono__intro {
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  margin: 0 0 16px;
+}
+
+.chrono__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px 10px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.chrono__h {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.chrono__rowlabel {
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+
+.chrono__grid input[type='time'] {
+  padding: 7px 8px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--text-dim) 40%, transparent);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-base);
+  width: 100%;
+}
+
+.chrono__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.chrono__stats div {
+  text-align: center;
+}
+
+.chrono__stats dt {
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin: 0 0 4px;
+}
+
+.chrono__stats dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-base);
+  color: var(--text);
+}
+
+.chrono__explain {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin: 0 0 10px;
+}
+
+.chrono__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Äußere Zyklen im Rhythmus-Panel (§26): Mond und Luftdruck neben dem
+   eigenen Rhythmus, rein anzeigend. */
+.chrono__cycles {
+  margin: 4px 0 14px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--text-dim) 22%, transparent);
+}
+
+.chrono__subh {
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin: 0 0 8px;
+}
+
+.chrono__cycle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  color: var(--text);
+  margin: 0 0 6px;
+}
+
+/* display:flex würde [hidden] sonst aushebeln. */
+.chrono__cycle[hidden] {
+  display: none;
+}
+
+.chrono__cycle-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  flex: none;
+  font-size: var(--fs-base);
+  color: var(--text-dim);
+}
+
+.chrono__cycle-ic svg {
+  display: block;
+}
+
+/* Outdoor-Panel (§29) */
+.onboard__card.outdoor {
+  text-align: left;
+  max-width: 420px;
+}
+
+.outdoor__hero {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  margin: 4px 0 16px;
+}
+
+.outdoor__hero-k {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+}
+
+.outdoor__hero-v {
+  font-size: var(--fs-md);
+  font-weight: 400;
+  color: var(--text);
+}
+
+.outdoor__block {
+  margin: 0 0 12px;
+  margin-inline: -4px;
+}
+
+.outdoor__block div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 8px 4px;
+  border-bottom: 1px solid color-mix(in srgb, var(--text-dim) 18%, transparent);
+}
+
+.outdoor__block dt {
+  font-size: var(--fs-base);
+  color: var(--text);
+}
+
+.outdoor__block dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+/* Info- & Unterstützen-Panel (§36, §38.3) */
+.onboard__card.about {
+  text-align: center;
+  max-width: 380px;
+}
+
+.about__mark {
+  font-size: 40px;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.about__tag {
+  color: var(--text-dim);
+  font-size: var(--fs-base);
+  margin: 0 0 16px;
+}
+
+.about__body {
+  font-size: var(--fs-base);
+  line-height: 1.55;
+  color: var(--text);
+  margin: 0 0 20px;
+}
+
+.about__support {
+  border-top: 1px solid color-mix(in srgb, var(--text-dim) 22%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--text-dim) 22%, transparent);
+  padding: 16px 0;
+  margin-bottom: 16px;
+}
+
+.about__support-k {
+  display: block;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+
+.about__links {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+.about__link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.about__link:hover {
+  text-decoration: underline;
+}
+
+.about__meta {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  margin: 0 0 16px;
+}
+
+/* Jahreskreis-Panel (§32.2) */
+.onboard__card.wheel {
+  text-align: left;
+  max-width: 420px;
+}
+
+.wheel__list {
+  list-style: none;
+  margin: 0 0 14px;
+  margin-inline: -8px;
+  padding: 0;
+}
+
+.wheel__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 9px 8px;
+  border-radius: 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--text-dim) 16%, transparent);
+}
+
+.wheel__row.is-next .wheel__name,
+.wheel__row.is-next .wheel__date {
+  color: var(--accent);
+}
+
+.wheel__name {
+  font-size: var(--fs-base);
+  color: var(--text);
+}
+
+.wheel__date {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+/* Modul-Menü */
+.modmenu__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 8px 0 16px;
+}
+
+.modmenu__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 8px;
+  border: 1px solid color-mix(in srgb, var(--text-dim) 30%, transparent);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--fs-xs);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.modmenu__item:hover {
+  border-color: var(--accent);
+}
+
+.modmenu__glyph {
+  font-size: var(--fs-lg);
+}
+
+/* Drawer-Menü (§11) — schiebt sich von rechts über die Seite */
+.drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+}
+
+.drawer[hidden] {
+  display: none;
+}
+
+.drawer__scrim {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, #05070c 55%, transparent);
+  opacity: 0;
+  transition: opacity 0.28s ease;
+}
+
+.drawer.is-open .drawer__scrim {
+  opacity: 1;
+}
+
+.drawer__panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: min(86vw, 360px);
+  background: var(--surface);
+  box-shadow: -18px 0 50px rgba(0, 0, 0, 0.28);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  padding: max(20px, env(safe-area-inset-top)) 8px 8px;
+}
+
+.drawer.is-open .drawer__panel {
+  transform: translateX(0);
+}
+
+.drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px 8px 16px;
+}
+
+.drawer__title {
+  font-family: var(--font-head);
+  font-size: var(--fs-md);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 8px 20px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.drawer__section + .drawer__section {
+  margin-top: 18px;
+}
+
+.drawer__h {
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin: 0 0 6px;
+  padding: 0 10px;
+}
+
+.mlist {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mrow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 12px 10px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--fs-base);
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.mrow:hover {
+  background: color-mix(in srgb, var(--text-dim) 12%, transparent);
+}
+
+.mrow:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* Innerhalb von .onboard__card direkt platziert (kein .mlist-Wrapper) —
+   Innenabstand kompensieren, damit Label/Switch mit dem übrigen Karteninhalt fluchten. */
+.mrow--pin {
+  margin-inline: -10px;
+}
+
+.mrow__ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  font-size: var(--fs-md);
+  flex: none;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+
+.mrow__ic svg {
+  display: block;
+}
+
+.mrow__label {
+  flex: 1;
+  min-width: 0;
+}
+
+.mrow__sub {
+  display: block;
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  font-weight: 400;
+}
+
+.mrow__chev {
+  color: var(--text-dim);
+  font-size: var(--fs-md);
+  display: inline-flex;
+}
+
+.mrow__val {
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+}
+
+/* Kippschalter für die Himmels-Ebenen */
+.mrow__switch {
+  position: relative;
+  width: 40px;
+  height: 24px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-dim) 35%, transparent);
+  flex: none;
+  transition: background 0.2s ease;
+}
+
+.mrow__switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease;
+}
+
+.mrow[aria-checked='true'] .mrow__switch {
+  background: var(--accent);
+}
+
+.mrow[aria-checked='true'] .mrow__switch::after {
+  transform: translateX(16px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer__scrim,
+  .drawer__panel,
+  .mrow__switch,
+  .mrow__switch::after {
+    transition: none;
+  }
+}
+
+/* Sonnenstunden-Panels (§31.2, §31.3) */
+.onboard__card.sunhours {
+  text-align: left;
+  max-width: 420px;
+}
+
+.sunhours__pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.sunhours__pair input[type='number'] {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--text-dim) 40%, transparent);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-mono);
+  width: 100%;
+}
+
+.sunhours__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 16px 0 10px;
+}
+
+.sunhours__stats--2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.sunhours__stats div {
+  text-align: center;
+}
+
+.sunhours__stats dt {
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin: 0 0 4px;
+}
+
+.sunhours__stats dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-base);
+  color: var(--text);
+}
+
+.sunhours__season {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  margin: 0 0 10px;
+}
+
+/* Hitze-/Wildtier-/Drohnen-Panels */
+.onboard__card.comfort {
+  text-align: left;
+  max-width: 420px;
+}
+
+.comfort__section {
+  margin-bottom: 16px;
+}
+
+.comfort__k {
+  display: block;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.comfort__v {
+  font-size: var(--fs-base);
+  color: var(--text);
+  margin: 0;
+}
+
+.comfort__temp {
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  margin: 6px 0 0;
+}
+
+.comfort__rows {
+  margin: 0 0 16px;
+  margin-inline: -4px;
+}
+
+.comfort__rows div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 9px 4px;
+  border-bottom: 1px solid color-mix(in srgb, var(--text-dim) 16%, transparent);
+}
+
+.comfort__rows dt {
+  font-size: var(--fs-base);
+  color: var(--text);
+}
+
+.comfort__rows dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+/* Meteorschauer-Panel (§21) */
+.onboard__card.meteor {
+  text-align: left;
+  max-width: 420px;
+}
+
+.meteor__list {
+  list-style: none;
+  margin: 0 0 8px;
+  margin-inline: -8px;
+  padding: 0;
+}
+
+.meteor__row {
+  padding: 10px 8px;
+  border-radius: 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--text-dim) 16%, transparent);
+}
+
+.meteor__row.is-active {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-bottom-color: transparent;
+}
+
+.meteor__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meteor__name {
+  font-size: var(--fs-base);
+  color: var(--text);
+}
+
+.meteor__badge {
+  font-size: var(--fs-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--on-accent);
+  background: var(--accent);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.meteor__meta {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  margin-top: 3px;
+}
+
+/* Kinder-Layer (§30) — große Formen, wenig Zahlen */
+.onboard__card.kids__card {
+  text-align: center;
+  max-width: 400px;
+  position: relative;
+  padding-top: 40px;
+}
+
+.kids__glyph {
+  font-size: 72px;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.kids__q {
+  font-family: var(--font-head);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  margin: 0 0 12px;
+  color: var(--text);
+}
+
+.kids__a {
+  font-size: var(--fs-lg);
+  color: var(--accent);
+  font-weight: 600;
+  margin: 0 0 16px;
+}
+
+.kids__why {
+  font-size: var(--fs-base);
+  line-height: 1.6;
+  color: var(--text-dim);
+  margin: 0 0 16px;
+  background: color-mix(in srgb, var(--secondary) 12%, transparent);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.kids__btns {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.kids__btns .btn {
+  height: auto;
+  font-size: var(--fs-base);
+  padding: 10px 18px;
+}
+
+.kids__task {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-base);
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin: 0;
+}
+
+.kids__task-ic {
+  display: inline-flex;
+  flex: none;
+}
+
+.kids__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: var(--fs-base);
+  cursor: pointer;
+}
+
+/* Wall mode (§25) */
+#app.is-wall .topbar,
+#app.is-wall .sky,
+#app.is-wall .locbar {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+
+#app.is-wall.wall-peek .topbar,
+#app.is-wall.wall-peek .sky,
+#app.is-wall.wall-peek .locbar {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#app.is-wall .frame {
+  justify-content: center;
+}
+
+/* Reduce motion (§13) */
+@media (prefers-reduced-motion: reduce) {
+  body,
+  .frame,
+  .view-wrap {
+    transition: none;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Zeitgeber — Instrument-Optik (Runde 2, Optionen 2a hell / 2b Nacht)
+   Ergänzung zu src/styles.css. Enthält nur Regeln, die bestehende Blöcke
+   überschreiben oder ergänzen — Reihenfolge: NACH dem bisherigen Inhalt
+   einfügen (oder die genannten Blöcke direkt ersetzen).
+
+   Farben kommen weiterhin aus der Theme-Engine: 2a ist der Tag-Zustand,
+   2b derselbe Code bei niedriger Sonne. Keine neue Palette.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* 1 — Tokens ─────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Zahlen und Mikro-Labels laufen ab jetzt echt monospaced. */
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  /* Haarlinien statt Kapselrahmen. */
+  --hair: color-mix(in srgb, var(--text-dim) 26%, transparent);
+  --hair-strong: color-mix(in srgb, var(--text-dim) 45%, transparent);
+  --radius: 3px;
+
+  /* Mikro-Typografie */
+  --micro-size: 10px;
+  --micro-track: 0.28em;
+
+  /* Schriftgrößen-Skala: 8 Stufen statt der zuvor ~19 Einzelwerte (10–30px),
+     an Empfehlungen wie Refactoring UI / Material Type Scale angelehnt
+     (6–8 Stufen für eine fokussierte App). Rein dekorative Einzel-Glyphen
+     (Onboarding-/Kids-/About-Icons, 40–72px) bleiben bewusst außen vor —
+     das ist Illustrationsgröße, keine Text-Hierarchie. */
+  --fs-2xs: 10px;
+  --fs-xs: 11px;
+  --fs-sm: 13px;
+  --fs-base: 15px;
+  --fs-md: 18px;
+  --fs-lg: 22px;
+  --fs-xl: 28px;
+  --fs-display: clamp(46px, 5.6vw, 88px);
+
+  /* Einheitliche Steuerelement-Höhe: .btn, .chip, .seg__btn, .iconbtn. */
+  --ctrl-h: 38px;
+}
+
+/* 2 — Topbar ─────────────────────────────────────────────────────────────── */
+
+.topbar__row {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--hair);
+}
+
+.brand__name {
+  font-family: var(--font-mono);
+  font-size: var(--fs-base);
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+}
+
+.brand__tag {
+  font-size: var(--fs-xs);
+}
+
+/* Der Ansicht-Umschalter zieht im Breitbild in die Kopfzeile (§ Layout 1b).
+   Dazu wandert `.seg` im Markup in `.topbar` — siehe patch/README.md, Schritt 3. */
+.topbar__mid {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* 3 — Bedienelemente: kantig, monospaced, Haarlinien ─────────────────────── */
+
+.seg {
+  border: 1px solid var(--hair-strong);
+  border-radius: var(--radius);
+  padding: 0;
+  overflow: hidden;
+}
+
+.seg__btn {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  border-radius: 0;
+  padding: 0 16px;
+}
+
+.seg__btn + .seg__btn {
+  border-left: 1px solid var(--hair-strong);
+}
+
+.chip,
+.btn,
+.t-input {
+  border-radius: var(--radius);
+}
+
+.chip {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-color: var(--hair-strong);
+  color: var(--text);
+}
+
+.chip--sm {
+  letter-spacing: 0.08em;
+  text-transform: none;
+  padding: 0 12px;
+}
+
+/* Die vier Zeitschritte sitzen als ein Block zusammen, nicht als vier Kapseln. */
+.stepper {
+  gap: 0;
+  border: 1px solid var(--hair-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.stepper .chip {
+  border: none;
+  border-radius: 0;
+  color: var(--text-dim);
+}
+
+.stepper .chip + .chip {
+  border-left: 1px solid var(--hair-strong);
+}
+
+.t-input {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  border-color: var(--hair-strong);
+}
+
+.iconbtn {
+  border-radius: var(--radius);
+  border: 1px solid var(--hair-strong);
+  font-size: var(--fs-md);
+}
+
+.iconbtn svg {
+  stroke-width: 1.75;
+}
+
+.iconbtn--warn {
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+#burger {
+  border: none;
+}
+
+.btn--primary,
+.btn--ghost {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* 4 — Zifferblatt ────────────────────────────────────────────────────────── */
+
+.view-wrap {
+  position: relative;
+  padding: 20px;
+  width: min(100%, 660px);
+}
+
+/* 5 — Ablesung ───────────────────────────────────────────────────────────── */
+
+.readout {
+  text-align: left;
+  gap: 10px;
+}
+
+.readout__label {
+  font-size: var(--fs-md);
+  margin-right: 0;
+}
+
+/* Label + Haarlinie in einer Zeile: `.readout__legal` bekommt die Linie. */
+.readout__legal {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.readout__legal::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--hair);
+}
+
+.readout__time {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-display);
+  font-weight: 200;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+}
+
+/* Sekunden im Akzent — braucht den Span aus README-Schritt 4. */
+.readout__sec {
+  color: var(--accent);
+}
+
+.readout__solar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.readout__solar-time {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xl);
+  font-weight: 300;
+  line-height: 1;
+}
+
+/* Δ-Feld für den Versatz (neues Element, README-Schritt 5) */
+.delta {
+  display: inline-flex;
+  align-items: center;
+  height: var(--ctrl-h);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  border-radius: var(--radius);
+  padding: 0 10px;
+}
+
+.offset {
+  margin: 0;
+  font-size: var(--fs-md);
+  line-height: 1.4;
+  max-width: 32ch;
+  margin-inline: 0;
+  text-wrap: pretty;
+}
+
+.offset__explain {
+  margin: 6px 0 0;
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+  max-width: 44ch;
+  margin-inline: 0;
+  text-wrap: pretty;
+}
+
+/* 6 — Kennwerte als gerissene Datenzeile ─────────────────────────────────── */
+
+.sky {
+  gap: 0;
+  padding-top: 0;
+  border-top: 1px solid var(--hair);
+  border-bottom: 1px solid var(--hair);
+}
+
+.sky__cell {
+  gap: 6px;
+  text-align: left;
+  padding: 18px 20px;
+}
+
+.sky__cell:first-child {
+  padding-left: 0;
+}
+
+.sky__cell:last-child {
+  padding-right: 0;
+}
+
+.sky__cell + .sky__cell {
+  border-left: 1px solid var(--hair);
+}
+
+.sky__k {
+  font-size: var(--fs-md);
+  justify-content: flex-start;
+}
+
+.sky__v {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xl);
+  font-weight: 300;
+}
+
+/* 7 — Standort / Sicht / Wetter als gerissene Datenzeile ─────────────────── */
+/* Dasselbe Spalten-Muster wie die Kennwerte-Zeile (.sky) unter dem
+   Zifferblatt (§6): Icon, große mono Kennzahl, gedämpfter Subtext, dünne
+   Trennlinien zwischen den Zellen. */
+
+.locbar__row {
+  border-bottom: 1px solid var(--hair);
+}
+
+.locbar__cell {
+  gap: 6px;
+  padding: 18px 20px;
+}
+
+.locbar__cell:first-child {
+  padding-left: 0;
+}
+
+.locbar__cell:last-child {
+  padding-right: 0;
+}
+
+.locbar__cell + .locbar__cell {
+  border-left: 1px solid var(--hair);
+}
+
+.locbar__k {
+  font-size: var(--fs-md);
+}
+
+.locbar__v {
+  font-size: var(--fs-xl);
+  font-weight: 300;
+}
+
+.locbar__v[data-rating='poor'] {
+  color: var(--text-dim);
+}
+
+/* 7b — Info-Karten (Dauer-Karten der eingeschalteten Info-Module, §7.4) ──── */
+
+.info-cards[hidden] {
+  display: none;
+}
+
+.info-card {
+  text-align: left;
+  padding-top: 20px;
+  border-top: 1px solid var(--hair);
+}
+
+.info-card + .info-card {
+  margin-top: 30px;
+}
+
+.info-card__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.info-card__ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-lg);
+}
+
+.info-card__title {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* 9 — Breitbild-Layout: drei Spalten, Zifferblatt bleibt Mitte ───────────── */
+/* Feste, zentrierte Content-Breite (kein Ausufern auf die volle
+   Fensterbreite). Module ordnen sich nach Themenspalte (§ InfoModuleDef.side
+   in main.ts) links oder rechts der Mitte an, statt sich per CSS-Multicolumn
+   selbst zu verteilen — die Zifferblatt-Spalte bleibt so immer die Mitte,
+   unabhängig davon, wie viele Karten je Seite aktiv sind. Reicht die Höhe
+   nicht, scrollt die jeweilige Spalte intern statt der ganzen Seite. */
+
+@media (min-width: 900px) {
+  :root[data-desktop-layout='columns'] .frame {
+    display: grid;
+    max-width: 1560px;
+    height: 100vh;
+    padding: 26px 44px 32px;
+    grid-template-columns: minmax(280px, 360px) minmax(420px, 680px) minmax(280px, 360px);
+    gap: 26px 40px;
+    grid-template-areas:
+      'topbar topbar topbar'
+      'left stage right';
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  :root[data-desktop-layout='columns'] .topbar {
+    grid-area: topbar;
+  }
+
+  /* Der Umschalter lebt in der Kopfzeile; die eigene Controls-Zeile entfällt. */
+  :root[data-desktop-layout='columns'] .controls {
+    display: none;
+  }
+
+  :root[data-desktop-layout='columns'] .stage {
+    grid-area: stage;
+    align-self: start;
+    min-height: 0;
+    max-height: 100%;
+    overflow-y: auto;
+    gap: 22px;
+  }
+
+  :root[data-desktop-layout='columns'] .stage .locbar {
+    margin-top: -22px;
+  }
+
+  :root[data-desktop-layout='columns'] .side {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    align-self: stretch;
+    min-height: 0;
+    max-height: 100%;
+    overflow-y: auto;
+    padding-right: 10px;
+  }
+
+  :root[data-desktop-layout='columns'] .side--left {
+    grid-area: left;
+  }
+
+  :root[data-desktop-layout='columns'] .side--right {
+    grid-area: right;
+  }
+
+  :root[data-desktop-layout='columns'] .timebar {
+    justify-content: center;
+  }
+}
+
+/* 10 — Mobil ─────────────────────────────────────────────────────────────── */
+
+@media (max-width: 899px) {
+  .frame {
+    gap: 12px;
+    padding: 14px 18px 18px;
+  }
+
+  .topbar {
+    padding-bottom: 14px;
+  }
+
+  /* Umschalter über die volle Breite, gleiche Blockform wie im Breitbild. */
+  .controls .seg {
+    display: flex;
+    width: 100%;
+  }
+
+  .controls .seg__btn {
+    flex: 1;
+    padding: 0;
+    letter-spacing: 0.14em;
+  }
+
+  /* Zeitschritte und Datumsfeld auf eine Breite bringen (fluchten sonst
+     nicht: Stepper zentriert schmaler als die Datumszeile darunter). */
+  .stepper {
+    width: 100%;
+  }
+
+  .stepper .chip {
+    flex: 1;
+  }
+
+  .t-input {
+    flex: 1;
+  }
+
+  .view-wrap {
+    padding: 14px;
+    width: 100%;
+  }
+
+  .readout__time {
+    font-size: 46px;
+  }
+
+  .readout__solar-time {
+    font-size: var(--fs-lg);
+  }
+
+  .offset {
+    font-size: var(--fs-base);
+  }
+
+  .offset__explain {
+    font-size: var(--fs-xs);
+  }
+
+  .sky__cell {
+    padding: 11px 10px;
+    gap: 4px;
+  }
+
+  .sky__v {
+    font-size: var(--fs-md);
+  }
+
+  /* vw statt Container-Query-Units: `container-type` auf .locbar__cell lässt
+     die ganze Grid-Zeile kollabieren (Zusammenspiel Grid-Track + Flex-Column
+     + Size-Containment), vw ist hier unkritisch, da die Spalten immer
+     proportional zur mobilen Viewport-Breite sind. Schrumpft „schlecht“
+     (längster Wert) statt es umzubrechen (white-space:nowrap, Basisregel). */
+  .locbar__v {
+    font-size: clamp(11px, 4vw, var(--fs-md));
+  }
+}
