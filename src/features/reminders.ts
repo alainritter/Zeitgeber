@@ -98,7 +98,7 @@ function saveFired(fired: Record<string, true>, now: Date): void {
 
 export type PermState = NotificationPermission | 'unsupported';
 
-export function notifyPermission(): PermState {
+function notifyPermission(): PermState {
   if (typeof Notification === 'undefined') return 'unsupported';
   return Notification.permission;
 }
@@ -138,7 +138,7 @@ export function initReminders(d: ReminderDeps): void {
   })();
 }
 
-export async function enableReminders(): Promise<{ perm: PermState; push: boolean }> {
+async function enableReminders(): Promise<{ perm: PermState; push: boolean }> {
   setEnabledFlag(true);
   let perm: PermState = 'unsupported';
   if (typeof Notification !== 'undefined') {
@@ -150,7 +150,7 @@ export async function enableReminders(): Promise<{ perm: PermState; push: boolea
   return { perm, push: pushActive };
 }
 
-export function disableReminders(): void {
+function disableReminders(): void {
   setEnabledFlag(false);
   stopLoop();
   pushActive = false;
@@ -163,7 +163,7 @@ export async function refreshReminderMeta(): Promise<void> {
 }
 
 /** Zustand fürs Panel. */
-export async function reminderStatus(): Promise<'off' | 'push' | 'foreground' | 'denied' | 'unsupported'> {
+async function reminderStatus(): Promise<'off' | 'push' | 'foreground' | 'denied' | 'unsupported'> {
   if (!remindersEnabled()) return 'off';
   if (!pushSupported()) return typeof Notification === 'undefined' ? 'unsupported' : 'foreground';
   if (Notification.permission === 'denied') return 'denied';
@@ -229,7 +229,7 @@ async function showReminder(title: string, body: string, tag: string): Promise<v
 }
 
 /** Vorschau, damit der Ton spürbar wird (immer als In-App-Hinweis). */
-export function previewReminder(t: Translator): void {
+function previewReminder(t: Translator): void {
   toast(t('remind.test.body'));
 }
 
