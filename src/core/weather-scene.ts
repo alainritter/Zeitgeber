@@ -49,15 +49,15 @@ export function phaseMix(elevationDeg: number): PhaseMix {
 // heller als die Dämmerungs-Palette, die Schrift verliert sonst Kontrast), nachts mittel.
 // Am Tag hängt sie vom Himmel ab: helle Szenen schwach (sonst wirken sie weiß und
 // ausgebleicht), dunkle (Regen, Sturm, tiefes Blau) stärker, weil die Tagschrift dunkel ist.
-const SCRIM_OTHER = { twilight: 0.72, night: 0.5 };
+const SCRIM_OTHER = { twilight: 0.5, night: 0.3 };
 const SCRIM_DAY: Record<WeatherScene, number> = {
-  clear: 0.4,
-  partly: 0.3,
-  overcast: 0.3,
-  fog: 0.3,
-  rain: 0.55,
-  snow: 0.3,
-  storm: 0.55,
+  clear: 0.25,
+  partly: 0.15,
+  overcast: 0.2,
+  fog: 0,
+  rain: 0.4,
+  snow: 0.15,
+  storm: 0.4,
 };
 
 export function scrimAlpha(mix: PhaseMix, scene: WeatherScene): number {
@@ -66,3 +66,12 @@ export function scrimAlpha(mix: PhaseMix, scene: WeatherScene): number {
 }
 
 export const skyImage = (scene: WeatherScene, phase: LightPhase): string => `weather/${scene}-${phase}.webp`;
+
+// Sterne nur bei offenem Himmel: klar voll, teils bewölkt halb (zwischen Wolken). Gewicht der
+// Nachtphase in der Überblendung, damit sie mit der Dämmerung auftauchen und morgens verschwinden.
+const STAR_SCENES: Partial<Record<WeatherScene, number>> = { clear: 1, partly: 0.5 };
+
+export function starAlpha(mix: PhaseMix, scene: WeatherScene): number {
+  const night = mix.from === 'night' ? 1 - mix.t : mix.to === 'night' ? mix.t : 0;
+  return night * (STAR_SCENES[scene] ?? 0);
+}

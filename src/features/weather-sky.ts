@@ -11,7 +11,7 @@
  * im Cache), bleibt die normale Theme-Fläche stehen — nie eine leere Ansicht (§10).
  */
 
-import { phaseMix, scrimAlpha, skyImage, type LightPhase, type WeatherScene } from '../core/weather-scene';
+import { phaseMix, scrimAlpha, skyImage, starAlpha, type LightPhase, type WeatherScene } from '../core/weather-scene';
 
 export interface SkyState {
   scene: WeatherScene;
@@ -46,6 +46,7 @@ export class WeatherSky {
   private root: HTMLElement;
   private stageHost: HTMLElement;
   private canvas: HTMLCanvasElement;
+  private stars: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D | null;
   private stage: Stage | null = null;
   private state: SkyState | null = null;
@@ -70,9 +71,11 @@ export class WeatherSky {
     fog.innerHTML = '<span></span><span></span>';
     this.canvas = document.createElement('canvas');
     this.canvas.className = 'wsky__fx';
+    this.stars = document.createElement('canvas');
+    this.stars.className = 'wsky__stars';
     const scrim = document.createElement('div');
     scrim.className = 'wsky__scrim';
-    this.root.append(this.stageHost, fog, this.canvas, scrim);
+    this.root.append(this.stageHost, fog, this.stars, this.canvas, scrim);
     parent.prepend(this.root);
     this.ctx = this.canvas.getContext('2d');
 
@@ -138,6 +141,7 @@ export class WeatherSky {
     const mix = phaseMix(elevation);
     const { from, to, t } = mix;
     this.root.style.setProperty('--wsky-scrim', scrimAlpha(mix, this.stage.scene).toFixed(3));
+    this.root.style.setProperty('--wsky-stars', starAlpha(mix, this.stage.scene).toFixed(3));
     for (const [phase, img] of Object.entries(this.stage.imgs) as [LightPhase, HTMLImageElement][]) {
       let o = 0;
       if (from === to) o = phase === from ? 1 : 0;
@@ -157,7 +161,27 @@ export class WeatherSky {
     this.size = { w, h, dpr };
     this.canvas.width = Math.round(w * dpr);
     this.canvas.height = Math.round(h * dpr);
+    this.drawStars();
     if (this.state) this.buildParticles();
+  }
+
+  /** Statisches Sternenfeld, einmal gezeichnet (kein Loop); Sichtbarkeit und Funkeln regelt CSS. */
+  private drawStars(): void {
+    const { w, h } = this.size;
+    const dpr = this.size.dpr;
+    this.stars.width = Math.round(w * dpr);
+    this.stars.height = Math.round(h * dpr);
+    const ctx = this.stars.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const n = Math.round((w * h) / 2500);
+    for (let i = 0; i < n; i++) {
+      const big = Math.random() < 0.08;
+      ctx.fillStyle = `rgba(255,255,255,${big ? 1 : rand(0.45, 0.9).toFixed(2)})`;
+      ctx.beginPath();
+      ctx.arc(rand(0, w), rand(0, h), big ? rand(1.4, 2) : rand(0.5, 1.1), 0, 6.2832);
+      ctx.fill();
+    }
   }
 
   private buildParticles(): void {

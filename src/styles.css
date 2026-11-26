@@ -2507,6 +2507,7 @@ body {
 .wsky__stages,
 .wsky__stage,
 .wsky__fx,
+.wsky__stars,
 .wsky__scrim,
 .wsky__fog {
   position: absolute;
@@ -2530,6 +2531,21 @@ body {
   will-change: transform;
 }
 
+.wsky__stars {
+  opacity: var(--wsky-stars, 0);
+  transition: opacity 2s ease;
+  animation: wsky-twinkle 7s ease-in-out infinite alternate;
+}
+
+@keyframes wsky-twinkle {
+  from {
+    filter: brightness(0.8);
+  }
+  to {
+    filter: brightness(1.15);
+  }
+}
+
 .wsky__scrim {
   background: color-mix(in srgb, var(--bg) calc(var(--wsky-scrim, 0.5) * 100%), transparent);
 }
@@ -2543,15 +2559,20 @@ body {
   opacity: 1;
 }
 
+/* Nebelbild ist von Haus aus fast einfarbig: Kontrast heben, sonst sieht man nichts davon. */
+.wsky[data-scene='fog'] .wsky__stage img {
+  filter: contrast(1.7) brightness(0.95);
+}
+
 .wsky__fog span {
   position: absolute;
   inset: -10% -30%;
-  background: radial-gradient(ellipse at 30% 60%, rgba(236, 240, 245, 0.55), transparent 62%);
+  background: radial-gradient(ellipse at 30% 60%, rgba(236, 240, 245, 0.4), transparent 62%);
   animation: wsky-fog 70s ease-in-out infinite alternate;
 }
 
 .wsky__fog span:last-child {
-  background: radial-gradient(ellipse at 70% 40%, rgba(236, 240, 245, 0.45), transparent 60%);
+  background: radial-gradient(ellipse at 70% 40%, rgba(120, 132, 150, 0.3), transparent 60%);
   animation-duration: 95s;
   animation-direction: alternate-reverse;
 }
@@ -2582,7 +2603,8 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .wsky__stage img,
-  .wsky__fog span {
+  .wsky__fog span,
+  .wsky__stars {
     animation: none;
   }
 }

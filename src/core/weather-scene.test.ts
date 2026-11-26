@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { phaseMix, sceneForCode, scrimAlpha, skyImage, WEATHER_SCENES } from './weather-scene';
+import { phaseMix, sceneForCode, scrimAlpha, skyImage, starAlpha, WEATHER_SCENES } from './weather-scene';
 
 describe('sceneForCode', () => {
   it.each([
@@ -48,9 +48,9 @@ describe('phaseMix', () => {
 
 describe('scrimAlpha', () => {
   it('ist am Tag schwach, in der Dämmerung stark und geht stetig dazwischen', () => {
-    expect(scrimAlpha(phaseMix(40), 'overcast')).toBeCloseTo(0.3);
-    expect(scrimAlpha(phaseMix(-4), 'overcast')).toBeCloseTo(0.72);
-    expect(scrimAlpha(phaseMix(-30), 'overcast')).toBeCloseTo(0.5);
+    expect(scrimAlpha(phaseMix(40), 'overcast')).toBeCloseTo(0.2);
+    expect(scrimAlpha(phaseMix(-4), 'overcast')).toBeCloseTo(0.5);
+    expect(scrimAlpha(phaseMix(-30), 'overcast')).toBeCloseTo(0.3);
     const mid = scrimAlpha(phaseMix(1), 'overcast');
     expect(mid).toBeGreaterThan(0.3);
     expect(mid).toBeLessThan(0.72);
@@ -65,5 +65,18 @@ describe('scrimAlpha', () => {
 describe('skyImage', () => {
   it('baut den Dateipfad', () => {
     expect(skyImage('storm', 'night')).toBe('weather/storm-night.webp');
+  });
+});
+
+describe('starAlpha', () => {
+  it('Sterne nur nachts und bei offenem Himmel', () => {
+    expect(starAlpha(phaseMix(-30), 'clear')).toBe(1);
+    expect(starAlpha(phaseMix(-30), 'partly')).toBe(0.5);
+    expect(starAlpha(phaseMix(-30), 'overcast')).toBe(0);
+    expect(starAlpha(phaseMix(40), 'clear')).toBe(0);
+  });
+  it('blendet mit der Dämmerung ein', () => {
+    expect(starAlpha(phaseMix(-4), 'clear')).toBe(0);
+    expect(starAlpha(phaseMix(-8), 'clear')).toBeCloseTo(0.5);
   });
 });

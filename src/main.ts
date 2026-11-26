@@ -632,7 +632,7 @@ function render(now: Date): void {
   const moon = objects.find((o) => o.kind === 'moon');
 
   const tz = utcOffsetMinutes(now, location.timeZone);
-  const { palette, nightness, sky } = paletteForElevation(sun?.horizontal.elevation ?? -90);
+  const { palette, nightness, sky } = paletteForElevation(devSky().elevation ?? sun?.horizontal.elevation ?? -90);
   applyPalette(palette, sky, nightness);
   wall?.setNightness(nightness);
   updateSky(sun?.horizontal.elevation ?? -90);
