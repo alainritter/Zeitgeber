@@ -101,12 +101,14 @@ export class WeatherSky {
   update(next: SkyState): void {
     if (!this.enabled) return;
     const sceneChanged = this.state?.scene !== next.scene;
+    // Dichte von Regen/Schnee folgt dem Niederschlag in groben Stufen, nicht nur dem Szenenwechsel.
+    const densityChanged = Math.round((this.state?.precipMm ?? 0) * 2) !== Math.round(next.precipMm * 2);
     this.state = next;
     if (sceneChanged || !this.stage) this.swapStage(next.scene);
     this.applyMix(next.elevation);
     this.root.dataset.scene = next.scene;
     this.root.style.setProperty('--wsky-drift', `${next.gustKmh > 40 ? 45 : 90}s`);
-    if (sceneChanged) this.buildParticles();
+    if (sceneChanged || densityChanged) this.buildParticles();
     this.syncLoop();
   }
 
@@ -149,6 +151,8 @@ export class WeatherSky {
       else if (phase === to) o = t;
       const s = o.toFixed(3);
       if (img.style.opacity !== s) img.style.opacity = s;
+      // Unsichtbare Phasenbilder nicht mitanimieren (Akku, §8).
+      img.style.animationPlayState = o > 0 ? 'running' : 'paused';
     }
   }
 

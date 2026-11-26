@@ -87,11 +87,14 @@ def run(g, prompt, seed):
     r = requests.post(f"{API}/queue/default/enqueue_batch", json={"batch": {"graph": g, "runs": 1}})
     r.raise_for_status()
     item_id = r.json()["item_ids"][0]
-    while True:
+    deadline = time.time() + 20 * 60
+    while time.time() < deadline:
         item = requests.get(f"{API}/queue/default/i/{item_id}").json()
         if item["status"] in ("completed", "failed", "canceled"):
             break
         time.sleep(3)
+    else:
+        sys.exit("Generierung nach 20 Minuten abgebrochen (InvokeAI hängt?)")
     if item["status"] != "completed":
         sys.exit(f"Generierung {item['status']}: {item.get('error_message') or ''}")
     name = next(v["image"]["image_name"] for v in item["session"]["results"].values() if "image" in v)
