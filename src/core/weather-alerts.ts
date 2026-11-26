@@ -73,6 +73,8 @@ export function parseNowcast(data: unknown): Nowcast | null {
   const c = d?.current;
   const m = d?.minutely_15;
   if (!c || !m || !Array.isArray(m.time)) return null;
+  // Ohne Wettercode oder Niederschlag würde „klar und trocken“ erfunden und ein falscher Hinweis ausgelöst.
+  if (c.weather_code == null || c.precipitation == null) return null;
   const steps: NowcastStep[] = m.time.map((t, i) => ({
     at: new Date(t * 1000),
     code: m.weather_code[i] ?? 0,

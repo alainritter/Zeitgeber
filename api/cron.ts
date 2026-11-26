@@ -211,6 +211,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
             const payload = JSON.stringify({ title: t('remind.appTitle'), body, tag: `weather:${a.type}`, url: '/' });
             const r = await deliver(sub, hash, payload);
             if (r === 'sent') sent++;
+            // Zustellung gescheitert: Sperre wieder lösen, der nächste Lauf versucht es erneut.
+            if (r === 'failed') await redis.del(sentKey(hash, `weather:${a.type}`));
             if (r === 'pruned') {
               pruned++;
               break; // Abo weg, weitere Hinweise wären zwecklos

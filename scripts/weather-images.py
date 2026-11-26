@@ -13,7 +13,7 @@ die Lichtphasen sauber überblenden lassen.
 
 Als Graph-Vorlage dient das neueste Krea-2-img2img-PNG aus dem InvokeAI-Output-Ordner
 (PNG-Chunk `invokeai_graph`, enthält den Node `i2l`). InvokeAI muss laufen
-(~/.local/bin/invokeai-launch.sh öffnet auch die Oberfläche; Kaltstart ~8-10 Min).
+(Eos/bin/invokeai-launch.sh öffnet auch die Oberfläche; Kaltstart ~8-10 Min).
 """
 import argparse, glob, io, json, os, sys, time
 import requests
@@ -194,7 +194,7 @@ def main():
     try:
         requests.get(f"{API}/app/version", timeout=3).raise_for_status()
     except requests.RequestException:
-        sys.exit("InvokeAI läuft nicht: ~/.local/bin/invokeai-launch.sh (Kaltstart ~8-10 Min)")
+        sys.exit("InvokeAI läuft nicht: Eos/bin/invokeai-launch.sh (Kaltstart ~8-10 Min)")
 
     g = template()
     os.makedirs(a.out, exist_ok=True)
