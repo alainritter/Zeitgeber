@@ -31,7 +31,7 @@ export interface Nowcast {
   utcOffsetSeconds: number;
 }
 
-export type WeatherAlertType = 'sun' | 'wind' | 'storm' | 'rain';
+type WeatherAlertType = 'sun' | 'wind' | 'storm' | 'rain';
 
 export interface WeatherAlert {
   type: WeatherAlertType;

@@ -48,7 +48,7 @@ export function remindersEnabled(): boolean {
 }
 
 /** Wetter-Hinweise sind eine eigene Einwilligung und laufen nur über Hintergrund-Push. */
-export function weatherAlertsEnabled(): boolean {
+function weatherAlertsEnabled(): boolean {
   try {
     return localStorage.getItem(WEATHER_KEY) === '1';
   } catch {
